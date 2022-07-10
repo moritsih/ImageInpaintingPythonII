@@ -5,6 +5,10 @@ Exercise 5
 """
 
 import numpy as np
+import os
+import matplotlib.pyplot as plt
+import torchvision.transforms.functional as TF
+import torch
 
 def set_random_spacing_offset(SEED):
     np.random.seed(SEED)
@@ -15,16 +19,27 @@ def set_random_spacing_offset(SEED):
     return (np.random.randint(0,8), np.random.randint(0,8)), \
            (np.random.randint(2,6), np.random.randint(2,6))
 
-'''
-#for i in range(3):
-arrays, idx = dataset[4]
-input_array, known_array, target_array = arrays
-print(input_array)
-print(f"{len(target_array)}")
-print(f"known_array = 0 mask: {len(np.ravel(input_array[known_array==0]))}")
-input_array[known_array == 0] = target_array
-input_array = np.moveaxis(input_array, 0, 2)
-PIL_image = Image.fromarray(input_array.astype('uint8'), 'RGB')
-plt.imshow(PIL_image)
-#plt.show()
-'''
+
+def plot(inputs, targets, predictions, path, update):
+    """Plotting the inputs, targets and predictions to file `path`"""
+    os.makedirs(path, exist_ok=True)
+    fig, axes = plt.subplots(ncols=3, figsize=(15, 5))
+
+    for i in range(len(inputs)):
+        for ax, data, title in zip(axes, [inputs, targets, predictions], ["Input", "Target", "Prediction"]):
+            ax.clear( )
+            ax.set_title(title)
+            ax.imshow(data[i, 0], interpolation="none")
+            ax.set_axis_off( )
+        fig.savefig(os.path.join(path, f"{update:07d}_{i:02d}.png"), dpi=100)
+
+    plt.close(fig)
+
+
+def plot_img(img):
+    if type(img) == "torch.Tensor":
+        img = torch.permute(img, (1, 2, 0))
+
+    #img = TF.to_pil_image(img)
+    plt.imshow(img)
+    plt.show()

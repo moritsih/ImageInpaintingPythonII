@@ -6,19 +6,14 @@ Exercise 5
 
 import os
 import numpy as np
-from PIL import Image
 import torch
-from torch import nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
-import matplotlib.pyplot as plt
-import glob
-from ex4 import ex4
-from ex3 import ImageStandardizer
 from data import DataExtraction, InpaintingData
 from model import SimpleCNN
 from tqdm import tqdm
+from utils import plot
 
 
 '''
@@ -32,8 +27,7 @@ ch_std = [51.91158522, 51.73857714, 55.01331596]
 im_shape = (100, 100)
 DIR = "training"
 #transforms.Normalize(mean=ch_mean,std=ch_std)
-tfm = transforms.Compose([transforms.Resize(size=im_shape),
-                          transforms.ToTensor()])
+tfm = transforms.Compose([transforms.Resize(size=im_shape)])
 
 
 def evaluate_model(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, loss_fn, device: torch.device):
@@ -67,15 +61,14 @@ def evaluate_model(model: torch.nn.Module, dataloader: torch.utils.data.DataLoad
 def main(results_path, network_config: dict, learningrate: int = 1e-3, weight_decay: float = 1e-5,
          n_updates: int = 50_000, device: torch.device = torch.device("cuda:0")):
 
-    data_paths_by_idx = DataExtraction(root_dir=DIR)
+    plotpath = os.path.join(results_path, "plots")
+    os.makedirs(plotpath, exist_ok=True)
 
-    is_it_working = torch.utils.data.Subset(
-        data_paths_by_idx,
-        indices=np.arange(30))
+    data_paths_by_idx = DataExtraction(root_dir=DIR)
 
     trainingset = torch.utils.data.Subset(
         data_paths_by_idx,
-        indices=np.arange(30, int(len(data_paths_by_idx) * (3 / 5))))
+        indices=np.arange(int(len(data_paths_by_idx) * (3 / 5))))
 
     validationset = torch.utils.data.Subset(
         data_paths_by_idx,
@@ -87,15 +80,13 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, weight_de
         indices=np.arange(int(len(data_paths_by_idx) * (4 / 5)),
                           len(data_paths_by_idx)))
 
-    is_it_working = InpaintingData(dataset=is_it_working, transform_chain=tfm)
     trainingset = InpaintingData(dataset=trainingset, transform_chain=tfm)
     validationset = InpaintingData(dataset=validationset, transform_chain=tfm)
     testset = InpaintingData(dataset=testset, transform_chain=tfm)
 
-    is_it_working = torch.utils.data.DataLoader(is_it_working, batch_size=2, shuffle=False, num_workers=0)#, collate_fn=custom_collate)
-    trainloader = torch.utils.data.DataLoader(trainingset, batch_size=2, shuffle=False, num_workers=0)#, collate_fn=custom_collate)
-    valloader = torch.utils.data.DataLoader(validationset, batch_size=2, shuffle=False, num_workers=0)#, collate_fn=custom_collate)
-    testloader = torch.utils.data.DataLoader(testset, batch_size=2, shuffle=False, num_workers=0)#, collate_fn=custom_collate)
+    trainloader = torch.utils.data.DataLoader(trainingset, batch_size=2, shuffle=False, num_workers=0)
+    valloader = torch.utils.data.DataLoader(validationset, batch_size=2, shuffle=False, num_workers=0)
+    testloader = torch.utils.data.DataLoader(testset, batch_size=2, shuffle=False, num_workers=0)
 
     writer = SummaryWriter(log_dir=os.path.join(results_path, "tensorboard"))
 
@@ -121,7 +112,7 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, weight_de
 
     # Train until n_updates updates have been reached
     while update < n_updates:
-        for data in is_it_working:
+        for data in trainloader:
 
             '''
             full_image = original image without grid cut out
@@ -150,10 +141,11 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, weight_de
                 writer.add_scalar(tag="training/loss", scalar_value=loss.cpu( ), global_step=update)
 
             # Plot output
-            #if (update + 1) % plot_at == 0:
-             #   plot(inputs.detach( ).cpu( ).numpy( ), targets.detach( ).cpu( ).numpy( ),
-              #       outputs.detach( ).cpu( ).numpy( ),
-               #      plotpath, update)
+            if (update + 1) % plot_at == 0:
+                plot(image_array_stacked.detach( ).cpu( ).numpy( ), full_image.detach( ).cpu( ).numpy( ),
+                     outputs.detach( ).cpu( ).numpy( ),
+                     plotpath, update)
+
 
             # Evaluate model on validation set
             if (update + 1) % validate_at == 0:
@@ -201,6 +193,7 @@ def main(results_path, network_config: dict, learningrate: int = 1e-3, weight_de
         print(f"  training loss: {train_loss}", file=rf)
         print(f"validation loss: {val_loss}", file=rf)
         print(f"      test loss: {test_loss}", file=rf)
+
 
 
 if __name__ == "__main__":

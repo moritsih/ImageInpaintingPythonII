@@ -4,11 +4,11 @@ Matr.Nr.: K11774793
 Exercise 5
 """
 
+from utils import plot_img
 import os
 import numpy as np
 from PIL import Image
 from torch.utils.data import Dataset
-import torchvision
 import torch
 import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
@@ -16,13 +16,14 @@ import glob
 from ex4 import ex4
 from ex3 import ImageStandardizer
 from utils import set_random_spacing_offset
+import matplotlib.pyplot as plt
 
 ### mean and std calculated using ex3: ImageStandardizer - mean&std over entire training set
 ch_mean = [124.771666, 120.852102, 113.64321009]
 ch_std = [51.91158522, 51.73857714, 55.01331596]
+
 im_shape = (100, 100)
-tfm = transforms.Compose([transforms.Resize(size=im_shape),
-                          transforms.ToTensor()])
+tfm = transforms.Compose([transforms.Resize(size=im_shape)])
 
 class DataExtraction(Dataset):
 
@@ -53,52 +54,41 @@ class InpaintingData(Dataset):
 
         im = Image.open(im)
 
-        # transformer for: Reshaping (100,100), mean/std normalization, 0-1 normalization
+        # transformer for: Reshaping (100,100)
         if self.transform is not None:
             im = self.transform(im)
 
-        # Place image normalization here in case it's useful
+        full_image = np.moveaxis(np.array(im, dtype=np.float32).copy(), 2, 0)
 
-        im = np.moveaxis(np.array(im, dtype=np.float32), 0, 2)
+        # Place image normalization here in case it's useful
+        im = np.array(im)
 
         offset, spacing = set_random_spacing_offset(idx)
 
         image_array, known_array, target_array = ex4(im, offset, spacing)
-        image_array = torch.transpose(TF.to_tensor(image_array), 1, 0)
-        known_array = TF.to_tensor(known_array[0,:,:])
 
-        image_array_stacked = torch.concat((image_array, known_array), 0)
+        known_array = known_array[0:1,:,:]
 
-        #print("Image array stacked shape: ", image_array_stacked.shape)
-        #print("Known array shape: ", known_array.shape)
-
-
-        full_image = np.moveaxis(im, 2, 0)
+        image_array_stacked = np.array(np.concatenate((image_array, known_array), 0), dtype=np.float32)
 
         return full_image, image_array_stacked, idx
 
-#dir = "training"
 
-#path = DataExtraction(dir)
+'''# >>> debugging <<<
+DIR = "training"
+data_paths_by_idx = DataExtraction(root_dir=DIR)
 
-#trainingset = torch.utils.data.Subset(path, indices=np.arange(int(len(path) * (3 / 5))))
+trainingset = torch.utils.data.Subset(
+    data_paths_by_idx,
+    indices=np.arange(int(len(data_paths_by_idx) * (3 / 5))))
 
-#trainingset = InpaintingData(trainingset, transform_chain=tfm)
+trainingset = InpaintingData(dataset=trainingset, transform_chain=tfm)
 
-#trainloader = torch.utils.data.DataLoader(trainingset, batch_size=2, shuffle=False, num_workers=0)
-#for i in trainloader:
+trainloader = torch.utils.data.DataLoader(trainingset, batch_size=2, shuffle=False, num_workers=0)
 
-    #print(torch.std(i[0][0][0]))
-    #print(i[1].shape)
-    #print(i[2].shape)
-    #print(i[3].shape)
- #   break
-
-
-
-
-#print(trainingset)
-
+for data in trainloader:
+    print(torch.permute(data[0][0], (1, 2, 0)).shape)
+    break'''
 
 
 
