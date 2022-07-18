@@ -1,6 +1,6 @@
 {
-  "results_path": "results",
-  "device": "cpu",
+  "results_path": "gdrive/MyDrive/Colab/results",
+  "device": "cuda",
   "learningrate": 1e-3,
   "weight_decay": 1e-5,
   "n_updates": 50000,
@@ -11,3 +11,4 @@
     "kernel_size": 3
   }
 }
+

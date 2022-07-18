@@ -29,7 +29,7 @@ def plot(inputs, targets, predictions, path, update):
         for ax, data, title in zip(axes, [inputs, targets, predictions], ["Input", "Target", "Prediction"]):
             ax.clear( )
             ax.set_title(title)
-            ax.imshow(data[i, 0], interpolation="none")
+            ax.imshow(np.transpose(data[i], (1, 2, 0))[:, :, 0:3], interpolation="none")
             ax.set_axis_off( )
         fig.savefig(os.path.join(path, f"{update:07d}_{i:02d}.png"), dpi=100)
 

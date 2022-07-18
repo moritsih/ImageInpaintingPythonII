@@ -14,16 +14,7 @@ import torchvision.transforms as transforms
 import torchvision.transforms.functional as TF
 import glob
 from ex4 import ex4
-from ex3 import ImageStandardizer
 from utils import set_random_spacing_offset
-import matplotlib.pyplot as plt
-
-### mean and std calculated using ex3: ImageStandardizer - mean&std over entire training set
-ch_mean = [124.771666, 120.852102, 113.64321009]
-ch_std = [51.91158522, 51.73857714, 55.01331596]
-
-im_shape = (100, 100)
-tfm = transforms.Compose([transforms.Resize(size=im_shape)])
 
 class DataExtraction(Dataset):
 
@@ -39,10 +30,10 @@ class DataExtraction(Dataset):
         return path, idx
 
 
-
 class InpaintingData(Dataset):
 
     def __init__(self, dataset: Dataset, transform_chain: transforms.Compose = None):
+
         self.transform = transform_chain
         self.dataset = dataset
 
@@ -54,18 +45,15 @@ class InpaintingData(Dataset):
 
         im = Image.open(im)
 
-        # transformer for: Reshaping (100,100)
         if self.transform is not None:
             im = self.transform(im)
 
-        full_image = np.moveaxis(np.array(im, dtype=np.float32).copy(), 2, 0)
-
-        # Place image normalization here in case it's useful
-        im = np.array(im)
+        # full_image shape: (3, 100, 100)
+        full_image = torch.clone(im)
 
         offset, spacing = set_random_spacing_offset(idx)
 
-        image_array, known_array, target_array = ex4(im, offset, spacing)
+        image_array, known_array, target_array = ex4(np.moveaxis(im.numpy(), 0, 2), offset, spacing)
 
         known_array = known_array[0:1,:,:]
 
@@ -73,8 +61,18 @@ class InpaintingData(Dataset):
 
         return full_image, image_array_stacked, idx
 
+'''
+# >>> debugging <<<
+### mean and std calculated using ex3: ImageStandardizer - mean&std over entire training set
+ch_mean = torch.tensor([124.771666, 120.852102, 113.64321009])/255
+ch_std = torch.tensor([51.91158522, 51.73857714, 55.01331596])/255
 
-'''# >>> debugging <<<
+im_shape = (100, 100)
+tfm = transforms.Compose([transforms.ToTensor(),
+                          transforms.Normalize(mean=ch_mean, std=ch_std),
+                          transforms.Resize(size=im_shape)])
+
+                          
 DIR = "training"
 data_paths_by_idx = DataExtraction(root_dir=DIR)
 
@@ -87,10 +85,10 @@ trainingset = InpaintingData(dataset=trainingset, transform_chain=tfm)
 trainloader = torch.utils.data.DataLoader(trainingset, batch_size=2, shuffle=False, num_workers=0)
 
 for data in trainloader:
-    print(torch.permute(data[0][0], (1, 2, 0)).shape)
-    break'''
+    print(data[0][0][1])
+    print(data[1][0][1])
+    break
 
-
-
+'''
 
 

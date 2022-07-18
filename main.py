@@ -15,20 +15,20 @@ from model import SimpleCNN
 from tqdm import tqdm
 from utils import plot
 
-
 '''
 Calculating training set mean & std using ex3:
 normalizer = ImageStandardizer(DIR)
 ch_mean, ch_std = normalizer.analyze_images()
 '''
-ch_mean = [124.771666, 120.852102, 113.64321009]
-ch_std = [51.91158522, 51.73857714, 55.01331596]
+ch_mean = torch.tensor([124.771666, 120.852102, 113.64321009])/255
+ch_std = torch.tensor([51.91158522, 51.73857714, 55.01331596])/255
 
 im_shape = (100, 100)
-DIR = "training"
-#transforms.Normalize(mean=ch_mean,std=ch_std)
-tfm = transforms.Compose([transforms.Resize(size=im_shape)])
+tfm = transforms.Compose([transforms.ToTensor(),
+                          transforms.Normalize(mean=ch_mean, std=ch_std),
+                          transforms.Resize(size=im_shape)])
 
+DIR = "training"
 
 def evaluate_model(model: torch.nn.Module, dataloader: torch.utils.data.DataLoader, loss_fn, device: torch.device):
     """Function for evaluation of a model `model` on the data in `dataloader` on device `device`,
